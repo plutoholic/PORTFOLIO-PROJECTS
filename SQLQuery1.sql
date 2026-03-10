@@ -1,119 +1,305 @@
-select top 10 * from PORTOFLIO..CovidDeaths order by 3,4
+/* ============================================================
+   COVID-19 DATA EXPLORATION PROJECT
+   Dataset: CovidDeaths & CovidVaccinations
+   Database: PORTOFLIO
 
--- select top 10 * from PORTOFLIO..CovidVaccinations order by 3,4
-
---Looking at Total Cases vs Total Deaths
-select location, date, total_cases, total_deaths, 
-(total_deaths/total_cases)*100 as DeathPercentage 
-from PORTOFLIO..CovidDeaths
-order by 1,2
-
-
---Looking at Total Cases vs Total Deaths Per Country
---Shows likelihood of dying if you get covid in your country
-select location, date, total_cases, total_deaths, 
-(total_deaths/total_cases)*100 as DeathPercentage 
-from PORTOFLIO..CovidDeaths
-where location like '%states%'
-order by 1,2
+   This project analyzes:
+   - Infection rates
+   - Death percentages
+   - Population infection percentages
+   - Global statistics
+   - Vaccination progress
+============================================================ */
 
 
---Looking at Total Cases vs Total Population Per Country
-SELECT location, date, total_cases, population,
--- Multiply by 1.0 to force decimal math, then CAST to remove extra decimals
-CAST((total_cases*1.0/population) * 100 AS DECIMAL(18,3)) as DeathPercentage 
+/* ============================================================
+   Preview Dataset
+============================================================ */
+
+-- Preview first 10 rows of CovidDeaths table
+SELECT TOP 10 *
+FROM PORTOFLIO..CovidDeaths
+ORDER BY 3,4;
+
+-- Preview first 10 rows of CovidVaccinations table
+-- SELECT TOP 10 *
+-- FROM PORTOFLIO..CovidVaccinations
+-- ORDER BY 3,4;
+
+
+
+/* ============================================================
+   Total Cases vs Total Deaths
+   Shows likelihood of dying if infected with COVID
+============================================================ */
+
+SELECT 
+    location,
+    date,
+    total_cases,
+    total_deaths,
+    (total_deaths * 1.0 / total_cases) * 100 AS DeathPercentage
+FROM PORTOFLIO..CovidDeaths
+ORDER BY location, date;
+
+
+
+/* ============================================================
+   Total Cases vs Total Deaths (United States Example)
+   Shows death percentage for a specific country
+============================================================ */
+
+SELECT 
+    location,
+    date,
+    total_cases,
+    total_deaths,
+    (total_deaths * 1.0 / total_cases) * 100 AS DeathPercentage
 FROM PORTOFLIO..CovidDeaths
 WHERE location LIKE '%states%'
-ORDER BY 1,2
+ORDER BY location, date;
 
 
---countries had the highest percentage of their population infected.
-SELECT location, population,
-MAX(total_cases) AS HighestInfectionCount,
-MAX((total_cases*1.0 / population)) * 100 AS PercentPopulationInfected
+
+/* ============================================================
+   Total Cases vs Population
+   Shows percentage of population infected
+============================================================ */
+
+SELECT 
+    location,
+    date,
+    total_cases,
+    population,
+    CAST((total_cases * 1.0 / population) * 100 AS DECIMAL(18,3)) 
+        AS PercentPopulationInfected
+FROM PORTOFLIO..CovidDeaths
+WHERE location LIKE '%states%'
+ORDER BY location, date;
+
+
+
+/* ============================================================
+   Countries with Highest Infection Rate
+============================================================ */
+
+SELECT 
+    location,
+    population,
+    MAX(total_cases) AS HighestInfectionCount,
+    CAST(MAX(total_cases * 1.0 / population) * 100 AS DECIMAL(18,5)) 
+        AS PercentPopulationInfected
 FROM PORTOFLIO..CovidDeaths
 GROUP BY location, population
-ORDER BY PercentPopulationInfected DESC
+ORDER BY PercentPopulationInfected DESC;
 
 
---countries with the highest total deaths.
-SELECT location,
-MAX(CAST(total_deaths AS INT)) AS TotalDeathCount
+
+/* ============================================================
+   Countries with Highest Infection Rate by Date
+============================================================ */
+
+SELECT 
+    location,
+    date,
+    population,
+    MAX(total_cases) AS HighestInfectionCount,
+    CAST(MAX(total_cases * 1.0 / population) * 100 AS DECIMAL(18,5)) 
+        AS PercentPopulationInfected
+FROM PORTOFLIO..CovidDeaths
+GROUP BY location, population, date
+ORDER BY PercentPopulationInfected DESC;
+
+
+
+/* ============================================================
+   Countries with Highest Total Deaths
+============================================================ */
+
+SELECT 
+    location,
+    MAX(CAST(total_deaths AS INT)) AS TotalDeathCount
 FROM PORTOFLIO..CovidDeaths
 WHERE continent IS NOT NULL
 GROUP BY location
-ORDER BY TotalDeathCount DESC
+ORDER BY TotalDeathCount DESC;
 
 
 
---continents with the highest total deaths.
-SELECT continent,
-MAX(CAST(total_deaths AS INT)) AS TotalDeathCount
+/* ============================================================
+   Continents with Highest Total Deaths
+============================================================ */
+
+SELECT 
+    continent,
+    SUM(CAST(new_deaths AS INT)) AS TotalDeathCount
 FROM PORTOFLIO..CovidDeaths
-WHERE continent IS not NULL
+WHERE continent IS NOT NULL
+AND location NOT IN ('World','European Union','International')
 GROUP BY continent
-ORDER BY TotalDeathCount DESC
-
-
---Global cases and deaths
-Select date, sum(new_cases) as Total_cases, sum(new_deaths) as Total_Deaths, 
-cast((sum(new_deaths)*1.0/sum(new_cases))*100 as decimal(18,3)) as Death_Percentage
-from PORTOFLIO..CovidDeaths
-where continent is not null
-group by date
-order by date, Total_cases
+ORDER BY TotalDeathCount DESC;
 
 
 
---Looking Total People Vaccinated
-with PopVac as (Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
-sum(vac.new_vaccinations) over (partition by dea.location order by dea.location, dea.date) as PeopleVaccinated
-from PORTOFLIO..CovidDeaths dea
-join PORTOFLIO..CovidVaccinations vac
-	on dea.location = vac.location
-	and dea.date = vac.date
-where dea.continent is not null
-and dea.location like '%canada%'
---order by 2,3
+/* ============================================================
+   Confirm Continent Death Totals
+   Aggregates deaths per country first, then continent
+============================================================ */
+
+SELECT 
+    continent,
+    SUM(MaxDeaths) AS TotalDeaths
+FROM
+(
+    SELECT 
+        continent,
+        location,
+        MAX(total_deaths) AS MaxDeaths
+    FROM PORTOFLIO..CovidDeaths
+    WHERE continent IS NOT NULL
+    AND location NOT IN ('World','European Union','International')
+    GROUP BY continent, location
+) AS DeathsByCountry
+GROUP BY continent
+ORDER BY TotalDeaths DESC;
+
+
+
+/* ============================================================
+   Global Cases and Deaths by Date
+============================================================ */
+
+SELECT 
+    date,
+    SUM(new_cases) AS TotalCases,
+    SUM(new_deaths) AS TotalDeaths,
+    CAST((SUM(new_deaths) * 1.0 / SUM(new_cases)) * 100 
+        AS DECIMAL(18,3)) AS DeathPercentage
+FROM PORTOFLIO..CovidDeaths
+WHERE continent IS NOT NULL
+GROUP BY date
+ORDER BY date;
+
+
+
+/* ============================================================
+   Total Global Cases and Deaths
+============================================================ */
+
+SELECT 
+    SUM(new_cases) AS TotalCases,
+    SUM(new_deaths) AS TotalDeaths,
+    CAST((SUM(new_deaths) * 1.0 / SUM(new_cases)) * 100 
+        AS DECIMAL(18,3)) AS DeathPercentage
+FROM PORTOFLIO..CovidDeaths
+WHERE continent IS NOT NULL;
+
+
+
+/* ============================================================
+   Vaccination Progress (CTE)
+   Calculates cumulative vaccinations by location
+============================================================ */
+
+WITH PopVac AS
+(
+    SELECT 
+        dea.continent,
+        dea.location,
+        dea.date,
+        dea.population,
+        vac.new_vaccinations,
+
+        SUM(vac.new_vaccinations) 
+        OVER (PARTITION BY dea.location 
+        ORDER BY dea.location, dea.date) AS PeopleVaccinated
+
+    FROM PORTOFLIO..CovidDeaths dea
+
+    JOIN PORTOFLIO..CovidVaccinations vac
+        ON dea.location = vac.location
+        AND dea.date = vac.date
+
+    WHERE dea.continent IS NOT NULL
 )
 
-select *, cast((PeopleVaccinated*1.0/Population)*100 as decimal (18,3)) as PercentageVaccinated from PopVac
+SELECT *,
+CAST((PeopleVaccinated * 1.0 / Population) * 100 AS DECIMAL(18,3)) 
+AS PercentageVaccinated
+FROM PopVac;
 
 
 
---Temp Table
-Drop Table if exists #PercentPopulationVaccinated
-Create Table #PercentPopulationVaccinated
+/* ============================================================
+   Temporary Table for Vaccination Analysis
+============================================================ */
+
+DROP TABLE IF EXISTS #PercentPopulationVaccinated;
+
+CREATE TABLE #PercentPopulationVaccinated
 (
-Continet nvarchar(255),
-Location nvarchar(255),
-DAte datetime,
-Population numeric,
-New_vaccinations numeric,
-PeopleVaccinated numeric)
+    Continent NVARCHAR(255),
+    Location NVARCHAR(255),
+    Date DATETIME,
+    Population NUMERIC,
+    New_vaccinations NUMERIC,
+    PeopleVaccinated NUMERIC
+);
 
-insert into #PercentPopulationVaccinated
-Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
-sum(vac.new_vaccinations) over (partition by dea.location order by dea.location, dea.date) as PeopleVaccinated
-from PORTOFLIO..CovidDeaths dea
-join PORTOFLIO..CovidVaccinations vac
-	on dea.location = vac.location
-	and dea.date = vac.date
+INSERT INTO #PercentPopulationVaccinated
+
+SELECT 
+    dea.continent,
+    dea.location,
+    dea.date,
+    dea.population,
+    vac.new_vaccinations,
+
+    SUM(vac.new_vaccinations)
+    OVER (PARTITION BY dea.location 
+    ORDER BY dea.location, dea.date) AS PeopleVaccinated
+
+FROM PORTOFLIO..CovidDeaths dea
+
+JOIN PORTOFLIO..CovidVaccinations vac
+    ON dea.location = vac.location
+    AND dea.date = vac.date;
 
 
---display temp table
-Select top 10 * from #PercentPopulationVaccinated
+
+-- Preview temporary table
+SELECT TOP 10 *
+FROM #PercentPopulationVaccinated;
 
 
---Creating view to store data for later visualizations
-Create view PercentagePopulationVaccinated as
-Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
-sum(vac.new_vaccinations) over (partition by dea.location order by dea.location, dea.date) as PeopleVaccinated
-from PORTOFLIO..CovidDeaths dea
-join PORTOFLIO..CovidVaccinations vac
-	on dea.location = vac.location
-	and dea.date = vac.date
-where dea.continent is not null
---order by 2,3
 
-select * from PercentagePopulationVaccinated
+/* ============================================================
+   Create View for Visualization (Power BI / Tableau)
+============================================================ */
+
+CREATE VIEW PercentagePopulationVaccinated AS
+
+SELECT 
+    dea.continent,
+    dea.location,
+    dea.date,
+    dea.population,
+    vac.new_vaccinations,
+
+    SUM(vac.new_vaccinations)
+    OVER (PARTITION BY dea.location 
+    ORDER BY dea.location, dea.date) AS PeopleVaccinated
+
+FROM PORTOFLIO..CovidDeaths dea
+
+JOIN PORTOFLIO..CovidVaccinations vac
+    ON dea.location = vac.location
+    AND dea.date = vac.date
+
+WHERE dea.continent IS NOT NULL;
+
+
+
+-- Query the view
+SELECT *
+FROM PercentagePopulationVaccinated;
