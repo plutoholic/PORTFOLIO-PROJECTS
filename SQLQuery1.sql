@@ -1,7 +1,7 @@
 /* ============================================================
    COVID-19 DATA EXPLORATION PROJECT
    Dataset: CovidDeaths & CovidVaccinations
-   Database: PORTOFLIO
+   Database: PORTFOLIO
 
    This project analyzes:
    - Infection rates
@@ -18,12 +18,12 @@
 
 -- Preview first 10 rows of CovidDeaths table
 SELECT TOP 10 *
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 ORDER BY 3,4;
 
 -- Preview first 10 rows of CovidVaccinations table
 -- SELECT TOP 10 *
--- FROM PORTOFLIO..CovidVaccinations
+-- FROM PORTFOLIO..CovidVaccinations
 -- ORDER BY 3,4;
 
 
@@ -39,7 +39,7 @@ SELECT
     total_cases,
     total_deaths,
     (total_deaths * 1.0 / total_cases) * 100 AS DeathPercentage
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 ORDER BY location, date;
 
 
@@ -55,7 +55,7 @@ SELECT
     total_cases,
     total_deaths,
     (total_deaths * 1.0 / total_cases) * 100 AS DeathPercentage
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 WHERE location LIKE '%states%'
 ORDER BY location, date;
 
@@ -73,7 +73,7 @@ SELECT
     population,
     CAST((total_cases * 1.0 / population) * 100 AS DECIMAL(18,3)) 
         AS PercentPopulationInfected
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 WHERE location LIKE '%states%'
 ORDER BY location, date;
 
@@ -89,7 +89,7 @@ SELECT
     MAX(total_cases) AS HighestInfectionCount,
     CAST(MAX(total_cases * 1.0 / population) * 100 AS DECIMAL(18,5)) 
         AS PercentPopulationInfected
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 GROUP BY location, population
 ORDER BY PercentPopulationInfected DESC;
 
@@ -106,7 +106,7 @@ SELECT
     MAX(total_cases) AS HighestInfectionCount,
     CAST(MAX(total_cases * 1.0 / population) * 100 AS DECIMAL(18,5)) 
         AS PercentPopulationInfected
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 GROUP BY location, population, date
 ORDER BY PercentPopulationInfected DESC;
 
@@ -119,7 +119,7 @@ ORDER BY PercentPopulationInfected DESC;
 SELECT 
     location,
     MAX(CAST(total_deaths AS INT)) AS TotalDeathCount
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 WHERE continent IS NOT NULL
 GROUP BY location
 ORDER BY TotalDeathCount DESC;
@@ -133,7 +133,7 @@ ORDER BY TotalDeathCount DESC;
 SELECT 
     continent,
     SUM(CAST(new_deaths AS INT)) AS TotalDeathCount
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 WHERE continent IS NOT NULL
 AND location NOT IN ('World','European Union','International')
 GROUP BY continent
@@ -155,7 +155,7 @@ FROM
         continent,
         location,
         MAX(total_deaths) AS MaxDeaths
-    FROM PORTOFLIO..CovidDeaths
+    FROM PORTFOLIO..CovidDeaths
     WHERE continent IS NOT NULL
     AND location NOT IN ('World','European Union','International')
     GROUP BY continent, location
@@ -175,7 +175,7 @@ SELECT
     SUM(new_deaths) AS TotalDeaths,
     CAST((SUM(new_deaths) * 1.0 / SUM(new_cases)) * 100 
         AS DECIMAL(18,3)) AS DeathPercentage
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 WHERE continent IS NOT NULL
 GROUP BY date
 ORDER BY date;
@@ -191,7 +191,7 @@ SELECT
     SUM(new_deaths) AS TotalDeaths,
     CAST((SUM(new_deaths) * 1.0 / SUM(new_cases)) * 100 
         AS DECIMAL(18,3)) AS DeathPercentage
-FROM PORTOFLIO..CovidDeaths
+FROM PORTFOLIO..CovidDeaths
 WHERE continent IS NOT NULL;
 
 
@@ -214,9 +214,9 @@ WITH PopVac AS
         OVER (PARTITION BY dea.location 
         ORDER BY dea.location, dea.date) AS PeopleVaccinated
 
-    FROM PORTOFLIO..CovidDeaths dea
+    FROM PORTFOLIO..CovidDeaths dea
 
-    JOIN PORTOFLIO..CovidVaccinations vac
+    JOIN PORTFOLIO..CovidVaccinations vac
         ON dea.location = vac.location
         AND dea.date = vac.date
 
@@ -259,9 +259,9 @@ SELECT
     OVER (PARTITION BY dea.location 
     ORDER BY dea.location, dea.date) AS PeopleVaccinated
 
-FROM PORTOFLIO..CovidDeaths dea
+FROM PORTFOLIO..CovidDeaths dea
 
-JOIN PORTOFLIO..CovidVaccinations vac
+JOIN PORTFOLIO..CovidVaccinations vac
     ON dea.location = vac.location
     AND dea.date = vac.date;
 
@@ -290,9 +290,9 @@ SELECT
     OVER (PARTITION BY dea.location 
     ORDER BY dea.location, dea.date) AS PeopleVaccinated
 
-FROM PORTOFLIO..CovidDeaths dea
+FROM PORTFOLIO..CovidDeaths dea
 
-JOIN PORTOFLIO..CovidVaccinations vac
+JOIN PORTFOLIO..CovidVaccinations vac
     ON dea.location = vac.location
     AND dea.date = vac.date
 
